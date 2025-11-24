@@ -7,38 +7,28 @@ use Illuminate\View\View;
 
 class InformasiController extends Controller
 {
-    public function publik(): View
-    {
-        return view('informasi.publik');
-    }
+    public function publik() {
+    return view('informasi-publik.informasi-publik');
+}
 
-    public function berkala(): View
-    {
-        return view('informasi.berkala');
-    }
+public function laporanKeuangan() {
+    return view('informasi-berkala.laporan-keuangan');
+}
 
-    public function sertaMerta(): View
-    {
-        return view('informasi.serta-merta');
-    }
+public function laporanKinerja() {
+    return view('informasi-berkala.laporan-kinerja');
+}
 
-    public function setiapSaat(): View
-    {
-        return view('informasi.setiap-saat');
-    }
+public function pengumuman() {
+    return view('informasi-sertamerta.pengumuman-darurat');
+}
 
-    public function ipkd(): View
-    {
-        return view('informasi.ipkd');
-    }
+public function dokumenHukum() {
+    return view('informasi-setiap.dokumen-hukum');
+}
 
-    public function permohonan(): View
-    {
-        return view('informasi.permohonan');
-    }
+public function ipkd() {
+    return view('ipkd.index');
+}
 
-    public function keberatan(): View
-    {
-        return view('informasi.keberatan');
-    }
 }

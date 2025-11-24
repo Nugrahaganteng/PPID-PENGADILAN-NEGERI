@@ -1,29 +1,43 @@
 <?php
-// app/Http/Controllers/PengaduanController.php
 
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Illuminate\Support\Facades\Validator;
 
 class PengaduanController extends Controller
 {
-    public function index(): View
+    public function index()
     {
         return view('pengaduan.index');
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'nama' => 'required|string|max:255',
-            'email' => 'required|email',
+            'email' => 'required|email|max:255',
+            'telepon' => 'required|string|max:20',
             'subjek' => 'required|string|max:255',
             'pesan' => 'required|string',
+        ], [
+            'nama.required' => 'Nama harus diisi',
+            'email.required' => 'Email harus diisi',
+            'email.email' => 'Format email tidak valid',
+            'telepon.required' => 'Telepon harus diisi',
+            'subjek.required' => 'Subjek harus diisi',
+            'pesan.required' => 'Pesan harus diisi',
         ]);
 
-        // Process pengaduan here
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
 
-        return back()->with('success', 'Pengaduan berhasil dikirim!');
+        // TODO: Simpan ke database
+        // Pengaduan::create($request->all());
+
+        return redirect()->back()->with('success', 'Pengaduan berhasil dikirim!');
     }
 }
