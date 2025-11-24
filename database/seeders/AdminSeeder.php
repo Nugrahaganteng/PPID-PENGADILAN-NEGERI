@@ -1,4 +1,5 @@
 <?php
+// database/seeders/AdminSeeder.php
 
 namespace Database\Seeders;
 
@@ -11,10 +12,11 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         User::create([
-            'name' => 'Admin1',
-            'email' => 'admin@gmail.com',
-            'password' => Hash::make('12345678'),
+            'name' => 'Administrator',
+            'email' => 'admin@gmail.com', // atau 'admin@gmail.com'
+            'password' => Hash::make('password'),
             'role' => 'admin',
+            'email_verified_at' => now(), // ← TAMBAHKAN INI
         ]);
     }
 }
