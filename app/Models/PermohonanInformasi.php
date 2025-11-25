@@ -16,52 +16,47 @@ class PermohonanInformasi extends Model
         'nama_lengkap',
         'email',
         'no_telp',
+        'alamat',
         'subjek',
         'isi_permohonan',
-        'file_pendukung',
+        'file_pendukung',     // File yang dikirim pemohon
         'status',
-        'catatan_admin',
-        'file_balasan',
-        'tanggal_diproses',
+        'file_tanggapan',     // File balasan dari admin
+        'tanggapan',
+        'tanggal_tanggapan',
     ];
 
     protected $casts = [
-        'tanggal_diproses' => 'datetime',
+        'tanggal_tanggapan' => 'datetime',
     ];
 
-    /**
-     * Relasi ke User
-     */
+    // Relasi ke User
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Get status badge color
-     */
+    // Accessor untuk status badge
     public function getStatusBadgeAttribute()
     {
         return match($this->status) {
             'pending' => 'bg-yellow-100 text-yellow-800',
-            'diproses' => 'bg-blue-100 text-blue-800',
+            'proses' => 'bg-blue-100 text-blue-800',
             'selesai' => 'bg-green-100 text-green-800',
             'ditolak' => 'bg-red-100 text-red-800',
             default => 'bg-gray-100 text-gray-800',
         };
     }
 
-    /**
-     * Get status text
-     */
+    // Accessor untuk status text
     public function getStatusTextAttribute()
     {
         return match($this->status) {
             'pending' => 'Menunggu',
-            'diproses' => 'Sedang Diproses',
+            'proses' => 'Diproses',
             'selesai' => 'Selesai',
             'ditolak' => 'Ditolak',
-            default => 'Unknown',
+            default => ucfirst($this->status),
         };
     }
 }

@@ -29,3 +29,7 @@ return new class extends Migration
         Schema::dropIfExists('notifications');
     }
 };
+
+// CATATAN: Jalankan perintah ini untuk membuat tabel notifikasi:
+// php artisan notifications:table
+// php artisan migrate

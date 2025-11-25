@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PermohonanController;
+use App\Http\Controllers\PermohonanInformasiController;
+use App\Http\Controllers\Admin\AdminPermohonanController;
 use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\InformasiController;
 use App\Http\Controllers\PengaduanController;
@@ -64,9 +67,47 @@ require __DIR__.'/auth.php';
 
 
 // ADMIN
-Route::middleware(['auth', 'role:admin'])
-    ->prefix('admin')
-    ->name('admin.')
-    ->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    });
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/admin/dashboard', [AdminPermohonanController::class, 'dashboard'])
+        ->name('admin.dashboard');
+});
+
+    // Routes untuk User (Harus Login)
+Route::middleware(['auth'])->group(function () {
+    Route::resource('permohonan', PermohonanInformasiController::class);
+});
+
+// ============================================
+// ROUTES UNTUK ADMIN (Harus Login sebagai Admin)
+// ============================================
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Dashboard Admin
+    Route::get('dashboard', [AdminPermohonanController::class, 'dashboard'])->name('dashboard');
+    
+    // Kelola Permohonan
+    Route::get('permohonan', [AdminPermohonanController::class, 'index'])->name('permohonan.index');
+    Route::get('permohonan/{id}', [AdminPermohonanController::class, 'show'])->name('permohonan.show');
+    Route::put('permohonan/{id}/update-status', [AdminPermohonanController::class, 'updateStatus'])->name('permohonan.update-status');
+    Route::delete('permohonan/{id}', [AdminPermohonanController::class, 'destroy'])->name('permohonan.destroy');
+});
+
+ // Permohonan Routes (untuk user yang sudah login)
+Route::middleware(['auth'])->group(function () {
+    
+    // CRUD Permohonan
+    Route::get('/permohonan', [PermohonanController::class, 'index'])->name('permohonan.index');
+    Route::get('/permohonan/create', [PermohonanController::class, 'create'])->name('permohonan.create');
+    Route::post('/permohonan', [PermohonanController::class, 'store'])->name('permohonan.store');
+    Route::get('/permohonan/{id}', [PermohonanController::class, 'show'])->name('permohonan.show');
+    
+    // Download Files
+    Route::get('/permohonan/{id}/download-file-pendukung', [PermohonanController::class, 'downloadFilePendukung'])
+        ->name('permohonan.download-file-pendukung');
+    
+    Route::get('/permohonan/{id}/download-file-tanggapan', [PermohonanController::class, 'downloadFileTanggapan'])
+        ->name('permohonan.download-file-tanggapan');
+    
+    // Cancel Permohonan
+    Route::delete('/permohonan/{id}/cancel', [PermohonanController::class, 'cancel'])
+        ->name('permohonan.cancel');
+});

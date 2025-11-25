@@ -14,6 +14,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'is_admin',
     ];
 
     protected $hidden = [
@@ -32,6 +33,24 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+     public function getIsAdminAttribute()
+    {
+        // Sesuaikan dengan sistem role Anda
+        // Contoh sederhana:
+        return $this->role === 'admin' || $this->email === 'admin@ppid.go.id';
+        
+        // Atau jika menggunakan kolom boolean:
+        // return $this->attributes['is_admin'] ?? false;
+    }
+
+    /**
+     * Relasi ke permohonan informasi
+     */
+    public function permohonanInformasi()
+    {
+        return $this->hasMany(PermohonanInformasi::class);
     }
 
     public function isTamu(): bool

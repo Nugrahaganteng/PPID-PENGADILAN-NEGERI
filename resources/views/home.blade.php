@@ -11,8 +11,6 @@
                     </p>
                 </div>
                 <div class="relative">
-                    {{-- Commented out image temporarily for debugging --}}
-                    {{-- <img src="{{ asset('image/pn.png') }}" alt="PPID Illustration" class="w-full h-auto"> --}}
                     <div class="bg-blue-600 rounded-lg p-12 text-center">
                         <svg class="w-32 h-32 mx-auto text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -61,9 +59,82 @@
 
             <!-- Main Content -->
             <div class="md:col-span-2">
+                <!-- ============================================ -->
+                <!-- SECTION PERMOHONAN INFORMASI (ENHANCED) -->
+                <!-- ============================================ -->
+                <div class="bg-gradient-to-r from-green-500 to-green-700 rounded-lg shadow-lg p-6 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-white mb-2 flex items-center">
+                                <span class="text-2xl mr-3">📬</span>
+                                Permohonan Informasi Publik
+                            </h3>
+                            <p class="text-green-50 text-sm">
+                                Ajukan permohonan informasi publik secara online. Layanan cepat, mudah, dan transparan.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    @auth
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <!-- Button Buat Permohonan Baru -->
+                        <a href="{{ route('permohonan.create') }}" 
+                           class="bg-white text-green-700 hover:bg-green-50 px-6 py-4 rounded-lg font-semibold shadow-md transition transform hover:scale-105 flex items-center justify-center group">
+                            <span class="text-2xl mr-3 group-hover:scale-110 transition">➕</span>
+                            <div class="text-left">
+                                <div class="font-bold">Buat Permohonan Baru</div>
+                                <div class="text-xs text-green-600">Ajukan permohonan informasi</div>
+                            </div>
+                        </a>
+
+                        <!-- Button Lihat Status Permohonan -->
+                        <a href="{{ route('permohonan.index') }}" 
+                           class="bg-white text-blue-700 hover:bg-blue-50 px-6 py-4 rounded-lg font-semibold shadow-md transition transform hover:scale-105 flex items-center justify-center group">
+                            <span class="text-2xl mr-3 group-hover:scale-110 transition">📋</span>
+                            <div class="text-left">
+                                <div class="font-bold">Lihat Status Permohonan</div>
+                                <div class="text-xs text-blue-600">Cek permohonan Anda</div>
+                            </div>
+                        </a>
+                    </div>
+                    @else
+                    <div class="flex justify-center">
+                        <a href="{{ route('login') }}" 
+                           class="bg-white text-green-700 hover:bg-green-50 px-8 py-4 rounded-lg font-semibold shadow-md transition transform hover:scale-105 inline-flex items-center">
+                            <span class="text-2xl mr-3">🔐</span>
+                            <div class="text-left">
+                                <div class="font-bold">Login untuk Mengajukan</div>
+                                <div class="text-xs text-green-600">Masuk untuk membuat permohonan</div>
+                            </div>
+                        </a>
+                    </div>
+                    @endauth
+
+                    <!-- Informasi Tambahan -->
+                    <div class="mt-4 pt-4 border-t border-green-400">
+                        <div class="grid grid-cols-3 gap-4 text-center">
+                            <div class="text-white">
+                                <div class="text-2xl font-bold">24/7</div>
+                                <div class="text-xs text-green-100">Layanan Online</div>
+                            </div>
+                            <div class="text-white">
+                                <div class="text-2xl font-bold">Fast</div>
+                                <div class="text-xs text-green-100">Respon Cepat</div>
+                            </div>
+                            <div class="text-white">
+                                <div class="text-2xl font-bold">Free</div>
+                                <div class="text-xs text-green-100">Tanpa Biaya</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- ============================================ -->
+                <!-- END SECTION PERMOHONAN INFORMASI -->
+                <!-- ============================================ -->
+
+                <!-- Konten PPID (Existing) -->
                 <div class="bg-white rounded-lg shadow-md p-8">
-                    {{-- Commented out image temporarily --}}
-                    {{-- <img src="{{ asset('image/pn.png') }}" alt="PPID Banner" class="w-full rounded-lg mb-6"> --}}
                     <div class="bg-gradient-to-r from-blue-500 to-blue-700 rounded-lg p-8 mb-6 text-white text-center">
                         <h2 class="text-2xl font-bold">PPID Kota Bogor</h2>
                         <p class="mt-2">Pejabat Pengelola Informasi dan Dokumentasi</p>

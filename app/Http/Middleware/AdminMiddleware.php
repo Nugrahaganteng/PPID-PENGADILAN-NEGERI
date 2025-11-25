@@ -10,11 +10,20 @@ class AdminMiddleware
 {
     /**
      * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Cek apakah user sudah login
+        if (!auth()->check()) {
+            return redirect()->route('login')
+                ->with('error', 'Silakan login terlebih dahulu');
+        }
+
+        // Cek apakah user adalah admin
+        if (!auth()->user()->is_admin) {
+            abort(403, '🚫 Akses ditolak. Halaman ini hanya untuk Admin.');
+        }
+
         return $next($request);
     }
 }

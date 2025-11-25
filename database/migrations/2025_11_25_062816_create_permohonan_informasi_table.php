@@ -16,15 +16,21 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('nama_lengkap');
             $table->string('email');
-            $table->string('no_telp');
+            $table->string('no_telp', 20);
+            $table->text('alamat');
             $table->string('subjek');
             $table->text('isi_permohonan');
-            $table->string('file_pendukung')->nullable(); // File upload dari user
-            $table->enum('status', ['pending', 'diproses', 'selesai', 'ditolak'])->default('pending');
-            $table->text('catatan_admin')->nullable(); // Catatan dari admin
-            $table->string('file_balasan')->nullable(); // File upload dari admin
-            $table->timestamp('tanggal_diproses')->nullable();
+            $table->string('file_pendukung')->nullable();
+            $table->enum('status', ['pending', 'proses', 'selesai', 'ditolak'])->default('pending');
+            $table->text('tanggapan')->nullable();
+            $table->string('file_tanggapan')->nullable();
+            $table->timestamp('tanggal_tanggapan')->nullable();
             $table->timestamps();
+
+            // Indexes
+            $table->index('user_id');
+            $table->index('status');
+            $table->index('created_at');
         });
     }
 
