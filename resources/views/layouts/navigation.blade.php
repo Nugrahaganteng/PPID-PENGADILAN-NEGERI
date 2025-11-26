@@ -170,28 +170,6 @@
                             class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50">Dokumen Hukum</a>
                     </div>
                 </div>
-
-                <a href="{{ route('ipkd') }}"
-                    class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition">
-                    IPKD
-                </a>
-
-                <!-- Pengaduan Dropdown -->
-                <div x-data="{ open: false }" @click.away="open = false" class="relative">
-                    <button @click="open = !open"
-                        class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md transition flex items-center">
-                        Pengaduan
-                        <svg class="ml-1 h-4 w-4" :class="{'rotate-180': open}" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                    <div x-show="open" x-transition
-                        class="absolute left-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5">
-                        <a href="{{ route('pengaduan.index') }}"
-                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50">Form Pengaduan</a>
-                    </div>
-                </div>
             </div>
 
             <!-- Mobile menu button -->
@@ -250,9 +228,6 @@
                             <a href="{{ route('tentang.tata-cara') }}" class="block px-3 py-2 text-sm text-gray-600 hover:bg-blue-50 rounded-md">Tata Cara</a>
                         </div>
                     </div>
-
-                    <!-- Add other mobile menu items following the same pattern -->
-                    <a href="{{ route('ipkd') }}" class="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-blue-50 rounded-md border-t border-gray-200 mt-2 pt-2">IPKD</a>
                     
                 </div>
             </div>

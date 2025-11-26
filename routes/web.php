@@ -83,12 +83,22 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard Admin
     Route::get('dashboard', [AdminPermohonanController::class, 'dashboard'])->name('dashboard');
+
+    Route::put('permohonan/{id}/update-status', [AdminPermohonanController::class, 'updateStatus'])
+        ->name('permohonan.update-status');
+
+    // Admin Permohonan Management
+    Route::resource('permohonan', AdminPermohonanController::class);
     
     // Kelola Permohonan
     Route::get('permohonan', [AdminPermohonanController::class, 'index'])->name('permohonan.index');
     Route::get('permohonan/{id}', [AdminPermohonanController::class, 'show'])->name('permohonan.show');
     Route::put('permohonan/{id}/update-status', [AdminPermohonanController::class, 'updateStatus'])->name('permohonan.update-status');
     Route::delete('permohonan/{id}', [AdminPermohonanController::class, 'destroy'])->name('permohonan.destroy');
+
+    Route::put('/permohonan/{id}/update-status', [AdminPermohonanController::class, 'updateStatus'])->name('permohonan.update-status');
+
+    Route::delete('/permohonan/{id}', [AdminPermohonanController::class, 'destroy'])->name('permohonan.destroy');
 });
 
  // Permohonan Routes (untuk user yang sudah login)
@@ -100,12 +110,24 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/permohonan', [PermohonanController::class, 'store'])->name('permohonan.store');
     Route::get('/permohonan/{id}', [PermohonanController::class, 'show'])->name('permohonan.show');
     
-    // Download Files
+    Route::get('/permohonan/{id}/view-file-pendukung', [PermohonanController::class, 'viewFilePendukung'])
+        ->name('permohonan.view-file-pendukung');
+    
+    // Download file pendukung
     Route::get('/permohonan/{id}/download-file-pendukung', [PermohonanController::class, 'downloadFilePendukung'])
         ->name('permohonan.download-file-pendukung');
     
+    // Routes untuk FILE TANGGAPAN
+    // Preview file tanggapan (untuk modal)
+    Route::get('/permohonan/{id}/view-file-tanggapan', [PermohonanController::class, 'viewFileTanggapan'])
+        ->name('permohonan.view-file-tanggapan');
+    
+    // Download file tanggapan
     Route::get('/permohonan/{id}/download-file-tanggapan', [PermohonanController::class, 'downloadFileTanggapan'])
         ->name('permohonan.download-file-tanggapan');
+    
+    // Routes lainnya untuk permohonan
+    Route::resource('permohonan', PermohonanController::class);
     
     // Cancel Permohonan
     Route::delete('/permohonan/{id}/cancel', [PermohonanController::class, 'cancel'])

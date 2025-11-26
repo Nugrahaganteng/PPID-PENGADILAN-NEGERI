@@ -1,133 +1,145 @@
 <?php
 
 namespace App\Http\Controllers;
-;
+
 use App\Models\PermohonanInformasi;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 class PermohonanController extends Controller
 {
-    /**
-     * Display listing of user's permohonan
-     */
+    // Tampilkan daftar permohonan user
     public function index()
     {
         $permohonan = PermohonanInformasi::where('user_id', Auth::id())
-            ->orderBy('created_at', 'desc')
+            ->latest()
             ->paginate(10);
-
+            
         return view('permohonan.index', compact('permohonan'));
     }
 
-    /**
-     * Show the form for creating new permohonan
-     */
+    // Form buat permohonan baru
     public function create()
     {
         return view('permohonan.create');
     }
 
-    /**
-     * Store a newly created permohonan
-     */
+    // Simpan permohonan baru
     public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'nama_lengkap' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'no_telp' => 'required|string|max:20',
-            'alamat' => 'required|string',
-            'subjek' => 'required|string|max:255',
-            'isi_permohonan' => 'required|string',
-            'file_pendukung' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
-        ], [
-            'nama_lengkap.required' => 'Nama lengkap wajib diisi',
-            'email.required' => 'Email wajib diisi',
-            'email.email' => 'Format email tidak valid',
-            'no_telp.required' => 'Nomor telepon wajib diisi',
-            'alamat.required' => 'Alamat wajib diisi',
-            'subjek.required' => 'Subjek permohonan wajib diisi',
-            'isi_permohonan.required' => 'Isi permohonan wajib diisi',
-            'file_pendukung.mimes' => 'File harus berformat: pdf, doc, docx, jpg, jpeg, png',
-            'file_pendukung.max' => 'Ukuran file maksimal 5MB',
-        ]);
+{
+    $validated = $request->validate([
+        'nama_lengkap' => 'required|max:255',
+        'email' => 'required|email|max:255',
+        'no_telp' => 'required|max:20',
+        'alamat' => 'required',
+        'subjek' => 'required|max:255',
+        'isi_permohonan' => 'required',
+        'file_pendukung' => 'nullable|file|max:10240|mimes:pdf,doc,docx,jpg,jpeg,png'
+    ]);
 
-        $validated['user_id'] = Auth::id();
-        $validated['status'] = 'pending';
+    $validated['user_id'] = Auth::id();
+    $validated['status'] = 'pending';
 
-        // Handle file upload
-        if ($request->hasFile('file_pendukung')) {
-            $file = $request->file('file_pendukung');
-            $fileName = time() . '_' . $file->getClientOriginalName();
-            $filePath = $file->storeAs('permohonan', $fileName, 'public');
-            $validated['file_pendukung'] = $filePath;
-        }
-
-        PermohonanInformasi::create($validated);
-
-        return redirect()->route('permohonan.index')
-            ->with('success', '✅ Permohonan berhasil diajukan! Kami akan segera memproses permohonan Anda.');
+    if ($request->hasFile('file_pendukung')) {
+        $validated['file_pendukung'] = $request->file('file_pendukung')->store('permohonan/pendukung', 'public');
     }
 
-    /**
-     * Display the specified permohonan
-     */
+    PermohonanInformasi::create($validated);
+
+    return redirect()->route('permohonan.index')->with('success', 'Permohonan berhasil diajukan!');
+}
+
+    // Lihat detail permohonan
     public function show($id)
     {
-        $permohonan = PermohonanInformasi::where('id', $id)
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
-
+        $permohonan = PermohonanInformasi::where('user_id', Auth::id())
+            ->findOrFail($id);
+            
         return view('permohonan.show', compact('permohonan'));
     }
 
-    /**
-     * Download file pendukung
-     */
-    public function downloadFilePendukung($id)
+    // Method untuk VIEW file pendukung (untuk preview)
+    public function viewFilePendukung($id)
     {
-        $permohonan = PermohonanInformasi::where('id', $id)
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
-
-        if (!$permohonan->file_pendukung || !Storage::disk('public')->exists($permohonan->file_pendukung)) {
+        $permohonan = PermohonanInformasi::findOrFail($id);
+        
+        // Cek apakah user memiliki akses
+        if (Auth::user()->role !== 'admin' && $permohonan->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized');
+        }
+        
+        if (!$permohonan->file_pendukung || !Storage::exists($permohonan->file_pendukung)) {
             abort(404, 'File tidak ditemukan');
         }
-
-        return Storage::disk('public')->download($permohonan->file_pendukung);
+        
+        $path = Storage::path($permohonan->file_pendukung);
+        $mimeType = Storage::mimeType($permohonan->file_pendukung);
+        
+        return response()->file($path, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . basename($permohonan->file_pendukung) . '"'
+        ]);
     }
-
-    /**
-     * Download file tanggapan dari admin
-     */
+    
+    // Method untuk DOWNLOAD file pendukung
+    public function downloadFilePendukung($id)
+    {
+        $permohonan = PermohonanInformasi::findOrFail($id);
+        
+        // Cek apakah user memiliki akses
+        if (Auth::user()->role !== 'admin' && $permohonan->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized');
+        }
+        
+        if (!$permohonan->file_pendukung || !Storage::exists($permohonan->file_pendukung)) {
+            abort(404, 'File tidak ditemukan');
+        }
+        
+        $fileName = basename($permohonan->file_pendukung);
+        
+        return Storage::download($permohonan->file_pendukung, $fileName);
+    }
+    
+    // Method untuk VIEW file tanggapan (untuk preview)
+    public function viewFileTanggapan($id)
+    {
+        $permohonan = PermohonanInformasi::findOrFail($id);
+        
+        // Cek apakah user memiliki akses
+        if (Auth::user()->role !== 'admin' && $permohonan->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized');
+        }
+        
+        if (!$permohonan->file_tanggapan || !Storage::exists($permohonan->file_tanggapan)) {
+            abort(404, 'File tidak ditemukan');
+        }
+        
+        $path = Storage::path($permohonan->file_tanggapan);
+        $mimeType = Storage::mimeType($permohonan->file_tanggapan);
+        
+        return response()->file($path, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . basename($permohonan->file_tanggapan) . '"'
+        ]);
+    }
+    
+    // Method untuk DOWNLOAD file tanggapan
     public function downloadFileTanggapan($id)
     {
-        $permohonan = PermohonanInformasi::where('id', $id)
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
-
-        if (!$permohonan->file_tanggapan || !Storage::disk('public')->exists($permohonan->file_tanggapan)) {
-            abort(404, 'File tanggapan tidak ditemukan');
+        $permohonan = PermohonanInformasi::findOrFail($id);
+        
+        // Cek apakah user memiliki akses
+        if (Auth::user()->role !== 'admin' && $permohonan->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized');
         }
-
-        return Storage::disk('public')->download($permohonan->file_tanggapan);
-    }
-
-    /**
-     * Cancel permohonan (only if status is pending)
-     */
-    public function cancel($id)
-    {
-        $permohonan = PermohonanInformasi::where('id', $id)
-            ->where('user_id', Auth::id())
-            ->where('status', 'pending')
-            ->firstOrFail();
-
-        $permohonan->delete();
-
-        return redirect()->route('permohonan.index')
-            ->with('success', '✅ Permohonan berhasil dibatalkan');
+        
+        if (!$permohonan->file_tanggapan || !Storage::exists($permohonan->file_tanggapan)) {
+            abort(404, 'File tidak ditemukan');
+        }
+        
+        $fileName = basename($permohonan->file_tanggapan);
+        
+        return Storage::download($permohonan->file_tanggapan, $fileName);
     }
 }

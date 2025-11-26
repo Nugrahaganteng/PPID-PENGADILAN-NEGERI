@@ -4,145 +4,145 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PermohonanInformasi;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class AdminPermohonanController extends Controller
 {
-
+    // Dashboard Admin
     public function dashboard()
-{
-    // Hitung statistik berdasarkan status
-    $totalPermohonan = PermohonanInformasi::count();
-    $pending = PermohonanInformasi::where('status', 'pending')->count();
-    $diproses = PermohonanInformasi::where('status', 'diproses')->count();
-    $selesai = PermohonanInformasi::where('status', 'selesai')->count();
-    $ditolak = PermohonanInformasi::where('status', 'ditolak')->count();
-    
-    // Ambil permohonan terbaru (10 data terakhir)
-    $permohonanTerbaru = PermohonanInformasi::latest()
-        ->take(10)
-        ->get();
-    
-    return view('admin.dashboard', compact(
-        'totalPermohonan',
-        'pending',
-        'diproses',
-        'selesai',
-        'ditolak',
-        'permohonanTerbaru'
-    ));
-}
-    /**
-     * Display listing of all permohonan
-     */
-    public function index(Request $request)
     {
-        $query = PermohonanInformasi::with('user')->orderBy('created_at', 'desc');
-
-        // Filter by status
-        if ($request->has('status') && $request->status != '') {
-            $query->where('status', $request->status);
-        }
-
-        // Search
-        if ($request->has('search') && $request->search != '') {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('nama_lengkap', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('subjek', 'like', "%{$search}%")
-                  ->orWhere('isi_permohonan', 'like', "%{$search}%");
-            });
-        }
-
-        $permohonan = $query->paginate(15);
-
-        // Stats
         $stats = [
+            'total_permohonan' => PermohonanInformasi::count(),
             'pending' => PermohonanInformasi::where('status', 'pending')->count(),
-            'diproses' => PermohonanInformasi::where('status', 'diproses')->count(),
+            'proses' => PermohonanInformasi::where('status', 'proses')->count(),
             'selesai' => PermohonanInformasi::where('status', 'selesai')->count(),
             'ditolak' => PermohonanInformasi::where('status', 'ditolak')->count(),
+            'total_users' => User::where('role', 'user')->count(),
         ];
 
-        return view('admin.permohonan.index', compact('permohonan', 'stats'));
+        $permohonan_terbaru = PermohonanInformasi::with('user')
+            ->latest()
+            ->take(5)
+            ->get();
+
+        return view('admin.dashboard', compact('stats', 'permohonan_terbaru'));
     }
 
-    /**
-     * Display the specified permohonan
-     */
+    // Tampilkan semua permohonan
+    public function index()
+    {
+        $permohonan = PermohonanInformasi::with('user')
+            ->latest()
+            ->paginate(15);
+            
+        return view('admin.permohonan.index', compact('permohonan'));
+    }
+
+    // Lihat detail permohonan
     public function show($id)
     {
         $permohonan = PermohonanInformasi::with('user')->findOrFail($id);
         return view('admin.permohonan.show', compact('permohonan'));
     }
 
-    /**
-     * Update status and response
-     */
+    // Form untuk membalas permohonan
+    public function edit($id)
+    {
+        $permohonan = PermohonanInformasi::with('user')->findOrFail($id);
+        return view('admin.permohonan.edit', compact('permohonan'));
+    }
+
+    // ✅ TAMBAHKAN METHOD INI - Update Status dan Tanggapan
     public function updateStatus(Request $request, $id)
     {
         $permohonan = PermohonanInformasi::findOrFail($id);
 
         $validated = $request->validate([
-            'status' => 'required|in:pending,diproses,selesai,ditolak',
-            'tanggapan_admin' => 'nullable|string',
-            'file_tanggapan' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
+            'status' => 'required|in:pending,proses,selesai,ditolak',
+            'tanggapan' => 'nullable|string',
+            'file_tanggapan' => 'nullable|file|max:10240|mimes:pdf,doc,docx,jpg,jpeg,png'
         ]);
 
         // Update status
         $permohonan->status = $validated['status'];
-        
-        // Update tanggapan if provided
-        if ($request->filled('tanggapan_admin')) {
-            $permohonan->tanggapan_admin = $validated['tanggapan_admin'];
+
+        // Update tanggapan jika ada
+        if ($request->filled('tanggapan')) {
+            $permohonan->tanggapan = $validated['tanggapan'];
         }
 
-        // Handle file upload
+        // Upload file tanggapan jika ada
         if ($request->hasFile('file_tanggapan')) {
-            // Delete old file if exists
-            if ($permohonan->file_tanggapan && Storage::disk('public')->exists($permohonan->file_tanggapan)) {
+            // Hapus file lama jika ada
+            if ($permohonan->file_tanggapan) {
                 Storage::disk('public')->delete($permohonan->file_tanggapan);
             }
-
-            // Store new file
-            $file = $request->file('file_tanggapan');
-            $fileName = time() . '_tanggapan_' . $file->getClientOriginalName();
-            $filePath = $file->storeAs('tanggapan', $fileName, 'public');
-            $permohonan->file_tanggapan = $filePath;
+            
+            $permohonan->file_tanggapan = $request->file('file_tanggapan')
+                ->store('permohonan/tanggapan', 'public');
         }
 
-        // Set tanggal tanggapan
-        if ($request->filled('tanggapan_admin') || $request->hasFile('file_tanggapan')) {
+        // Set tanggal tanggapan jika ada tanggapan atau file
+        if ($request->filled('tanggapan') || $request->hasFile('file_tanggapan')) {
             $permohonan->tanggal_tanggapan = now();
         }
 
         $permohonan->save();
 
-        return redirect()->route('admin.permohonan.show', $permohonan->id)
-            ->with('success', '✅ Status permohonan berhasil diperbarui!');
+        return redirect()->route('admin.permohonan.show', $id)
+            ->with('success', 'Status permohonan berhasil diupdate!');
     }
 
-    /**
-     * Remove the specified permohonan
-     */
+    // Update permohonan (untuk edit form)
+    public function update(Request $request, $id)
+    {
+        $permohonan = PermohonanInformasi::findOrFail($id);
+
+        $validated = $request->validate([
+            'status' => 'required|in:pending,proses,selesai,ditolak',
+            'tanggapan' => 'nullable|string',
+            'file_tanggapan' => 'nullable|file|max:10240|mimes:pdf,doc,docx,jpg,jpeg,png'
+        ]);
+
+        // Hapus file lama jika ada file baru
+        if ($request->hasFile('file_tanggapan') && $permohonan->file_tanggapan) {
+            Storage::disk('public')->delete($permohonan->file_tanggapan);
+        }
+
+        if ($request->hasFile('file_tanggapan')) {
+            $validated['file_tanggapan'] = $request->file('file_tanggapan')
+                ->store('permohonan/tanggapan', 'public');
+        }
+
+        // Set tanggal tanggapan jika ada tanggapan
+        if ($request->filled('tanggapan') || $request->hasFile('file_tanggapan')) {
+            $validated['tanggal_tanggapan'] = now();
+        }
+
+        $permohonan->update($validated);
+
+        return redirect()->route('admin.permohonan.index')
+            ->with('success', 'Permohonan berhasil diupdate!');
+    }
+
+    // Hapus permohonan
     public function destroy($id)
     {
         $permohonan = PermohonanInformasi::findOrFail($id);
 
-        // Delete files if exist
-        if ($permohonan->file_pendukung && Storage::disk('public')->exists($permohonan->file_pendukung)) {
+        // Hapus file jika ada
+        if ($permohonan->file_pendukung) {
             Storage::disk('public')->delete($permohonan->file_pendukung);
         }
-
-        if ($permohonan->file_tanggapan && Storage::disk('public')->exists($permohonan->file_tanggapan)) {
+        if ($permohonan->file_tanggapan) {
             Storage::disk('public')->delete($permohonan->file_tanggapan);
         }
 
         $permohonan->delete();
 
         return redirect()->route('admin.permohonan.index')
-            ->with('success', '✅ Permohonan berhasil dihapus!');
+            ->with('success', 'Permohonan berhasil dihapus!');
     }
 }
