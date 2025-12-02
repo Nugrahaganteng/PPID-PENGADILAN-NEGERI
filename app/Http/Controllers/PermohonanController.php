@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\PermohonanNotification;
 use App\Models\PermohonanInformasi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use Mail;
 
 class PermohonanController extends Controller
 {
@@ -27,28 +29,43 @@ class PermohonanController extends Controller
 
     // Simpan permohonan baru
     public function store(Request $request)
-{
-    $validated = $request->validate([
-        'nama_lengkap' => 'required|max:255',
-        'email' => 'required|email|max:255',
-        'no_telp' => 'required|max:20',
-        'alamat' => 'required',
-        'subjek' => 'required|max:255',
-        'isi_permohonan' => 'required',
-        'file_pendukung' => 'nullable|file|max:10240|mimes:pdf,doc,docx,jpg,jpeg,png'
-    ]);
+    {
+        // Validasi input
+        $request->validate([
+            'nama_lengkap' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'no_telp' => 'required|string|max:20',
+            'alamat' => 'required|string',
+            'subjek' => 'required|string|max:255',
+            'isi_permohonan' => 'required|string',
+            'file_pendukung' => 'nullable|file|max:10240|mimes:pdf,doc,docx,jpg,jpeg,png'
+        ]);
 
-    $validated['user_id'] = Auth::id();
-    $validated['status'] = 'pending';
+        // Siapkan data untuk disimpan
+        $data = [
+            'nama_lengkap' => $request->nama_lengkap,
+            'email' => $request->email,
+            'no_telp' => $request->no_telp,
+            'alamat' => $request->alamat,
+            'subjek' => $request->subjek,
+            'isi_permohonan' => $request->isi_permohonan,
+            'user_id' => Auth::id(),
+            'status' => 'pending',
+        ];
 
-    if ($request->hasFile('file_pendukung')) {
-        $validated['file_pendukung'] = $request->file('file_pendukung')->store('permohonan/pendukung', 'public');
+        // Handle file upload jika ada
+        if ($request->hasFile('file_pendukung')) {
+            $data['file_pendukung'] = $request->file('file_pendukung')
+                ->store('permohonan/pendukung', 'public');
+        }
+
+        // Simpan ke database
+        PermohonanInformasi::create($data);
+
+        // Redirect dengan pesan sukses
+        return redirect()->route('permohonan.index')
+            ->with('success', 'Permohonan informasi berhasil diajukan!');
     }
-
-    PermohonanInformasi::create($validated);
-
-    return redirect()->route('permohonan.index')->with('success', 'Permohonan berhasil diajukan!');
-}
 
     // Lihat detail permohonan
     public function show($id)
@@ -69,12 +86,12 @@ class PermohonanController extends Controller
             abort(403, 'Unauthorized');
         }
         
-        if (!$permohonan->file_pendukung || !Storage::exists($permohonan->file_pendukung)) {
+        if (!$permohonan->file_pendukung || !Storage::disk('public')->exists($permohonan->file_pendukung)) {
             abort(404, 'File tidak ditemukan');
         }
         
-        $path = Storage::path($permohonan->file_pendukung);
-        $mimeType = Storage::mimeType($permohonan->file_pendukung);
+        $path = Storage::disk('public')->path($permohonan->file_pendukung);
+        $mimeType = Storage::disk('public')->mimeType($permohonan->file_pendukung);
         
         return response()->file($path, [
             'Content-Type' => $mimeType,
@@ -92,13 +109,13 @@ class PermohonanController extends Controller
             abort(403, 'Unauthorized');
         }
         
-        if (!$permohonan->file_pendukung || !Storage::exists($permohonan->file_pendukung)) {
+        if (!$permohonan->file_pendukung || !Storage::disk('public')->exists($permohonan->file_pendukung)) {
             abort(404, 'File tidak ditemukan');
         }
         
         $fileName = basename($permohonan->file_pendukung);
         
-        return Storage::download($permohonan->file_pendukung, $fileName);
+        return Storage::disk('public')->download($permohonan->file_pendukung, $fileName);
     }
     
     // Method untuk VIEW file tanggapan (untuk preview)
@@ -111,12 +128,12 @@ class PermohonanController extends Controller
             abort(403, 'Unauthorized');
         }
         
-        if (!$permohonan->file_tanggapan || !Storage::exists($permohonan->file_tanggapan)) {
+        if (!$permohonan->file_tanggapan || !Storage::disk('public')->exists($permohonan->file_tanggapan)) {
             abort(404, 'File tidak ditemukan');
         }
         
-        $path = Storage::path($permohonan->file_tanggapan);
-        $mimeType = Storage::mimeType($permohonan->file_tanggapan);
+        $path = Storage::disk('public')->path($permohonan->file_tanggapan);
+        $mimeType = Storage::disk('public')->mimeType($permohonan->file_tanggapan);
         
         return response()->file($path, [
             'Content-Type' => $mimeType,
@@ -134,12 +151,40 @@ class PermohonanController extends Controller
             abort(403, 'Unauthorized');
         }
         
-        if (!$permohonan->file_tanggapan || !Storage::exists($permohonan->file_tanggapan)) {
+        if (!$permohonan->file_tanggapan || !Storage::disk('public')->exists($permohonan->file_tanggapan)) {
             abort(404, 'File tidak ditemukan');
         }
         
         $fileName = basename($permohonan->file_tanggapan);
         
-        return Storage::download($permohonan->file_tanggapan, $fileName);
+        return Storage::disk('public')->download($permohonan->file_tanggapan, $fileName);
     }
+
+    public function tanggapiPermohonan(Request $request, $id)
+{
+    $permohonan = PermohonanInformasi::findOrFail($id);
+    
+    $permohonan->update([
+        'status_permohonan' => $request->status_permohonan,
+        'tanggapan' => $request->tanggapan,
+        'catatan' => $request->catatan,
+    ]);
+
+    try {
+        // Kirim ke email pemohon langsung
+        Mail::to($permohonan->email)
+            ->send(new PermohonanNotification($permohonan));
+        
+        return response()->json([
+            'success' => true,
+            'message' => '✅ Permohonan berhasil ditanggapi dan email telah dikirim!'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => true,
+            'message' => '✅ Permohonan berhasil ditanggapi',
+            'warning' => '⚠️ Email gagal: ' . $e->getMessage()
+        ]);
+    }
+}
 }

@@ -5,11 +5,19 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\PermohonanInformasi;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class AdminPermohonanController extends Controller
 {
+    protected $notificationService;
+
+    public function __construct(NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
+
     // Dashboard Admin
     public function dashboard()
     {
@@ -31,11 +39,16 @@ class AdminPermohonanController extends Controller
     }
 
     // Tampilkan semua permohonan
-    public function index()
+    public function index(Request $request)
     {
-        $permohonan = PermohonanInformasi::with('user')
-            ->latest()
-            ->paginate(15);
+        $query = PermohonanInformasi::with('user')->latest();
+
+        // Filter berdasarkan status jika ada
+        if ($request->status) {
+            $query->where('status', $request->status);
+        }
+
+        $permohonan = $query->paginate(15);
             
         return view('admin.permohonan.index', compact('permohonan'));
     }
@@ -43,7 +56,7 @@ class AdminPermohonanController extends Controller
     // Lihat detail permohonan
     public function show($id)
     {
-        $permohonan = PermohonanInformasi::with('user')->findOrFail($id);
+        $permohonan = PermohonanInformasi::with(['user', 'notifications'])->findOrFail($id);
         return view('admin.permohonan.show', compact('permohonan'));
     }
 
@@ -54,7 +67,7 @@ class AdminPermohonanController extends Controller
         return view('admin.permohonan.edit', compact('permohonan'));
     }
 
-    // ✅ TAMBAHKAN METHOD INI - Update Status dan Tanggapan
+    // Update Status dan Tanggapan (Method dari controller lama Anda)
     public function updateStatus(Request $request, $id)
     {
         $permohonan = PermohonanInformasi::findOrFail($id);
@@ -62,7 +75,8 @@ class AdminPermohonanController extends Controller
         $validated = $request->validate([
             'status' => 'required|in:pending,proses,selesai,ditolak',
             'tanggapan' => 'nullable|string',
-            'file_tanggapan' => 'nullable|file|max:10240|mimes:pdf,doc,docx,jpg,jpeg,png'
+            'file_tanggapan' => 'nullable|file|max:10240|mimes:pdf,doc,docx,jpg,jpeg,png',
+            'notification_type' => 'nullable|in:email,whatsapp,both'
         ]);
 
         // Update status
@@ -91,40 +105,107 @@ class AdminPermohonanController extends Controller
 
         $permohonan->save();
 
+        // Kirim notifikasi jika ada notification_type
+        if ($request->filled('notification_type')) {
+            $results = $this->notificationService->sendNotification(
+                $permohonan, 
+                $request->notification_type
+            );
+
+            // Buat pesan hasil notifikasi
+            $messages = [];
+            if (isset($results['email'])) {
+                $messages[] = $results['email']['message'];
+            }
+            if (isset($results['whatsapp'])) {
+                $messages[] = $results['whatsapp']['message'];
+            }
+
+            $successMessage = 'Status permohonan berhasil diupdate! ' . implode(' ', $messages);
+        } else {
+            $successMessage = 'Status permohonan berhasil diupdate!';
+        }
+
         return redirect()->route('admin.permohonan.show', $id)
-            ->with('success', 'Status permohonan berhasil diupdate!');
+            ->with('success', $successMessage);
     }
 
-    // Update permohonan (untuk edit form)
+    // Update permohonan (untuk edit form dengan notifikasi)
     public function update(Request $request, $id)
     {
         $permohonan = PermohonanInformasi::findOrFail($id);
 
         $validated = $request->validate([
             'status' => 'required|in:pending,proses,selesai,ditolak',
-            'tanggapan' => 'nullable|string',
-            'file_tanggapan' => 'nullable|file|max:10240|mimes:pdf,doc,docx,jpg,jpeg,png'
+            'tanggapan' => 'required|string',
+            'file_tanggapan' => 'nullable|file|max:10240|mimes:pdf,doc,docx,jpg,jpeg,png,xls,xlsx',
+            'notification_type' => 'required|in:email,whatsapp,both'
         ]);
 
-        // Hapus file lama jika ada file baru
-        if ($request->hasFile('file_tanggapan') && $permohonan->file_tanggapan) {
-            Storage::disk('public')->delete($permohonan->file_tanggapan);
-        }
+        // Update status
+        $permohonan->status = $validated['status'];
+        $permohonan->tanggapan = $validated['tanggapan'];
 
+        // Upload file tanggapan jika ada
         if ($request->hasFile('file_tanggapan')) {
-            $validated['file_tanggapan'] = $request->file('file_tanggapan')
-                ->store('permohonan/tanggapan', 'public');
+            // Hapus file lama jika ada
+            if ($permohonan->file_tanggapan) {
+                Storage::disk('public')->delete($permohonan->file_tanggapan);
+            }
+
+            $file = $request->file('file_tanggapan');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $permohonan->file_tanggapan = $file->storeAs('permohonan/tanggapan', $filename, 'public');
         }
 
-        // Set tanggal tanggapan jika ada tanggapan
-        if ($request->filled('tanggapan') || $request->hasFile('file_tanggapan')) {
-            $validated['tanggal_tanggapan'] = now();
+        // Set tanggal tanggapan
+        $permohonan->tanggal_tanggapan = now();
+        $permohonan->save();
+
+        // Kirim notifikasi
+        $notificationType = $request->notification_type;
+        $results = $this->notificationService->sendNotification($permohonan, $notificationType);
+
+        // Buat pesan hasil
+        $messages = [];
+        if (isset($results['email'])) {
+            $messages[] = $results['email']['message'];
+        }
+        if (isset($results['whatsapp'])) {
+            $messages[] = $results['whatsapp']['message'];
         }
 
-        $permohonan->update($validated);
+        $successMessage = 'Permohonan berhasil ditanggapi dan notifikasi telah dikirim! ' . implode(' ', $messages);
 
         return redirect()->route('admin.permohonan.index')
-            ->with('success', 'Permohonan berhasil diupdate!');
+            ->with('success', $successMessage);
+    }
+
+    // Kirim ulang notifikasi
+    public function resendNotification(Request $request, $id)
+    {
+        $permohonan = PermohonanInformasi::findOrFail($id);
+
+        $request->validate([
+            'type' => 'required|in:email,whatsapp,both'
+        ]);
+
+        // Pastikan permohonan sudah ditanggapi
+        if (!$permohonan->tanggapan && !$permohonan->tanggal_tanggapan) {
+            return back()->with('error', 'Permohonan belum ditanggapi, tidak dapat mengirim notifikasi.');
+        }
+
+        $results = $this->notificationService->sendNotification($permohonan, $request->type);
+
+        $messages = [];
+        if (isset($results['email'])) {
+            $messages[] = $results['email']['message'];
+        }
+        if (isset($results['whatsapp'])) {
+            $messages[] = $results['whatsapp']['message'];
+        }
+
+        return back()->with('success', 'Notifikasi berhasil dikirim ulang! ' . implode(' ', $messages));
     }
 
     // Hapus permohonan

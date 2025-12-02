@@ -89,6 +89,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     // Admin Permohonan Management
     Route::resource('permohonan', AdminPermohonanController::class);
+
+    // Resend notification
+    Route::post('permohonan/{permohonan}/resend-notification', [AdminPermohonanController::class, 'resendNotification'])
+        ->name('permohonan.resend-notification');
     
     // Kelola Permohonan
     Route::get('permohonan', [AdminPermohonanController::class, 'index'])->name('permohonan.index');
@@ -132,4 +136,17 @@ Route::middleware(['auth'])->group(function () {
     // Cancel Permohonan
     Route::delete('/permohonan/{id}/cancel', [PermohonanController::class, 'cancel'])
         ->name('permohonan.cancel');
+});
+
+Route::get('/test-email', function () {
+    try {
+        Mail::raw('Halo! Ini test email dari Laravel menggunakan Resend.', function ($message) {
+            $message->to('email-kamu@gmail.com') // Ganti dengan email kamu
+                    ->subject('Test Email Resend');
+        });
+        
+        return 'Email berhasil dikirim! Cek inbox email kamu.';
+    } catch (\Exception $e) {
+        return 'Error: ' . $e->getMessage();
+    }
 });
