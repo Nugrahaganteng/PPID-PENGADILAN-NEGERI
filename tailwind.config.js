@@ -16,10 +16,10 @@ export default {
                     900: "#1e3a8a",
                     800: "#1e40af",
                     700: "#1d4ed8",
-                    fontFamily: {
-                        sans: ["Figtree", ...defaultTheme.fontFamily.sans],
-                    },
                 },
+            },
+            fontFamily: {
+                sans: ["Figtree", ...defaultTheme.fontFamily.sans],
             },
         },
     },
